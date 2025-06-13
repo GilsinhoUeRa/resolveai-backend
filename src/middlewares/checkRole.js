@@ -6,7 +6,7 @@ const pool = require('../config/database');
 const checkRole = (rolesPermitidas) => {
     return async (req, res, next) => {
         // Assumimos que checkAuth já rodou, então temos req.userData.userId
-        const { userId } = req.userData;
+        const { id: userId } = req.user; // Usamos 'req.user' agora
 
         try {
             const resultado = await pool.query('SELECT role FROM usuarios WHERE id = $1', [userId]);
