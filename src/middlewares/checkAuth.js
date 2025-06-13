@@ -1,4 +1,4 @@
-// src/middleware/checkAuth.js
+// src/middlewares/checkAuth.js
 const jwt = require('jsonwebtoken');
 
 const checkAuth = (req, res, next) => {

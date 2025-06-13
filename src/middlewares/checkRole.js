@@ -1,4 +1,4 @@
-// src/middleware/checkRole.js
+// src/middlewares/checkRole.js
 const pool = require('../config/database');
 
 // Esta é uma função de ordem superior. Ela retorna a função de middleware.
