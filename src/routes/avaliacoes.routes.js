@@ -1,6 +1,6 @@
 // src/routes/avaliacoes.routes.js
 const { Router } = require('express');
-const { checkAuth, checkRole } = require('../middleware/auth.middleware');
+const { checkAuth, checkRole } = require('../middlewares/auth.middleware');
 const servicosController = require('../controllers/servicos.controller');
 
 // A opção { mergeParams: true } é essencial para que este roteador 
