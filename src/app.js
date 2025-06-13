@@ -11,9 +11,9 @@ app.use(express.json());
 // app.use(cors());
 
 // Importando as rotas de usuários
-const usuariosRoutes = require('./src/routes/usuarios.routes');
-const servicosRoutes = require('./src/routes/servicos.routes');
-const categoriasRoutes = require('./src/routes/categorias.routes');
+const usuariosRoutes = require('./routes/usuarios.routes');
+const servicosRoutes = require('./routes/servicos.routes');
+const categoriasRoutes = require('./routes/categorias.routes');
 
 // Definindo as Rotas de Usuários da API
 app.use('/api/usuarios', usuariosRoutes);
