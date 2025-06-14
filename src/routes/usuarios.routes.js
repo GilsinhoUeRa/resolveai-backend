@@ -1,4 +1,4 @@
-// src/routes/usuarios.routes.js (Versão Completa e Corrigida)
+// src/routes/usuarios.routes.js (Versão Final Corrigida)
 
 const { Router } = require('express');
 const usuariosController = require('../controllers/usuarios.controller');
@@ -14,8 +14,6 @@ const router = Router();
 router.post('/', usuariosController.createUser);
 
 // --- ROTAS PROTEGIDAS ---
-// Apenas usuários autenticados (com token válido) podem acessar as rotas abaixo.
-
 // A rota mais específica '/me' deve vir ANTES da rota genérica '/:id' para funcionar.
 router.get('/me', checkAuth, usuariosController.getMe);
 
@@ -24,7 +22,7 @@ router.get('/', checkAuth, checkRole(['ADMIN']), usuariosController.getAllUsers)
 
 // Rotas para um usuário específico.
 router.get('/:id', checkAuth, usuariosController.getUserById);
-router.patch('/:id', checkAuth, usuariosController.updateUser); // Assumimos que um usuário pode editar a si mesmo ou um admin pode editar outros.
-router.delete('/:id', checkAuth, checkRole(['ADMIN']), usuariosController.deleteUser); // Apenas um ADMIN pode deletar usuários.
+router.patch('/:id', checkAuth, usuariosController.updateUser);
+router.delete('/:id', checkAuth, checkRole(['ADMIN']), usuariosController.deleteUser);
 
 module.exports = router;

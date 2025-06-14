@@ -3,11 +3,20 @@ const pool = require('../config/database');
 
 exports.createCategory = async (req, res) => {
     const { nome } = req.body;
+
+    if (!nome) {
+        return res.status(400).json({ erro: 'O nome da categoria é obrigatório.' });
+    }
+
     try {
         const novaCategoria = await pool.query("INSERT INTO categorias (nome) VALUES ($1) RETURNING *", [nome]);
         res.status(201).json(novaCategoria.rows[0]);
     } catch (erro) {
-        console.error(erro.message);
+        // Adiciona tratamento para o erro de violação de chave única
+        if (erro.code === '23505') { 
+            return res.status(409).json({ erro: 'Uma categoria com este nome já existe.' });
+        }
+        console.error('Erro ao criar categoria:', erro);
         res.status(500).json({ erro: 'Ocorreu um erro no servidor' });
     }
 };
