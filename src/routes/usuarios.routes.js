@@ -1,19 +1,25 @@
 // src/routes/usuarios.routes.js
-
 const { Router } = require('express');
 const usuariosController = require('../controllers/usuarios.controller');
 const { checkAuth, checkRole } = require('../middlewares/auth.middleware');
 
 const router = Router();
 
-// As rotas agora são relativas ao prefixo que será definido no app.js
-// Ex: Se app.use('/api/usuarios', router), então '/' vira '/api/usuarios'
-// e '/:id' vira '/api/usuarios/:id'
+// --- ROTAS PÚBLICAS ---
+router.post('/', usuariosController.createUser); // Qualquer um pode criar um usuário
 
-router.post('/', usuariosController.createUser); // Rota: POST /api/usuarios
-router.get('/', usuariosController.getAllUsers);   // Rota: GET /api/usuarios
-router.get('/:id', usuariosController.getUserById); // Rota: GET /api/usuarios/:id
-router.patch('/:id', usuariosController.updateUser); // Rota: PATCH /api/usuarios/:id
-router.delete('/:id', usuariosController.deleteUser); // Rota: DELETE /api/usuarios/:id
+// --- ROTAS PROTEGIDAS ---
+// A rota mais específica '/me' deve vir ANTES da rota genérica '/:id'
+router.get('/me', checkAuth, usuariosController.getMe); 
+
+// Apenas um ADMIN pode ver todos os usuários
+router.get('/', checkAuth, checkRole(['ADMIN']), usuariosController.getAllUsers);
+
+// Rotas que podem ser acessadas por usuários autenticados
+router.get('/:id', checkAuth, usuariosController.getUserById); 
+router.patch('/:id', checkAuth, usuariosController.updateUser); 
+
+// Apenas um ADMIN pode deletar um usuário
+router.delete('/:id', checkAuth, checkRole(['ADMIN']), usuariosController.deleteUser); 
 
 module.exports = router;
