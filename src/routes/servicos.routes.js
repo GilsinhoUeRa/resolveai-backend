@@ -2,7 +2,8 @@
 const { Router } = require('express');
 const servicosController = require('../controllers/servicos.controller');
 // 1. Importações unificadas e limpas do nosso middleware padrão
-const { checkAuth, checkRole } = require('../middlewares/auth.middleware');
+const checkAuth = require('../middlewares/checkAuth');
+const checkRole = require('../middlewares/checkRole');
 // Importamos o roteador de avaliações para delegar a ele
 const avaliacoesRouter = require('./avaliacoes.routes');
 
