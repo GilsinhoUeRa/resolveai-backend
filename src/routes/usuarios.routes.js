@@ -1,25 +1,30 @@
-// src/routes/usuarios.routes.js
+// src/routes/usuarios.routes.js (Versão Completa e Corrigida)
+
 const { Router } = require('express');
 const usuariosController = require('../controllers/usuarios.controller');
-const { checkAuth, checkRole } = require('../middlewares/auth.middleware');
+
+// Correção: Importamos cada middleware do seu respectivo arquivo.
+const checkAuth = require('../middlewares/checkAuth');
+const checkRole = require('../middlewares/checkRole');
 
 const router = Router();
 
-// --- ROTAS PÚBLICAS ---
-router.post('/', usuariosController.createUser); // Qualquer um pode criar um usuário
+// --- ROTA PÚBLICA ---
+// Qualquer um pode criar um novo usuário.
+router.post('/', usuariosController.createUser);
 
 // --- ROTAS PROTEGIDAS ---
-// A rota mais específica '/me' deve vir ANTES da rota genérica '/:id'
-router.get('/me', checkAuth, usuariosController.getMe); 
+// Apenas usuários autenticados (com token válido) podem acessar as rotas abaixo.
 
-// Apenas um ADMIN pode ver todos os usuários
+// A rota mais específica '/me' deve vir ANTES da rota genérica '/:id' para funcionar.
+router.get('/me', checkAuth, usuariosController.getMe);
+
+// Rota para buscar todos os usuários, agora protegida para que apenas ADMINs possam acessá-la.
 router.get('/', checkAuth, checkRole(['ADMIN']), usuariosController.getAllUsers);
 
-// Rotas que podem ser acessadas por usuários autenticados
-router.get('/:id', checkAuth, usuariosController.getUserById); 
-router.patch('/:id', checkAuth, usuariosController.updateUser); 
-
-// Apenas um ADMIN pode deletar um usuário
-router.delete('/:id', checkAuth, checkRole(['ADMIN']), usuariosController.deleteUser); 
+// Rotas para um usuário específico.
+router.get('/:id', checkAuth, usuariosController.getUserById);
+router.patch('/:id', checkAuth, usuariosController.updateUser); // Assumimos que um usuário pode editar a si mesmo ou um admin pode editar outros.
+router.delete('/:id', checkAuth, checkRole(['ADMIN']), usuariosController.deleteUser); // Apenas um ADMIN pode deletar usuários.
 
 module.exports = router;
