@@ -46,6 +46,28 @@ exports.getAllUsers = async (req, res) => {
     }
 };
 
+// R - Read (Self - /me)
+exports.getMe = async (req, res) => {
+    // Assumindo que o middleware checkAuth adiciona o ID do usuário em req.usuarioId
+    // ou informações do usuário em req.user.id
+    const usuarioId = req.usuarioId; // Ou req.user.id, dependendo da sua implementação do checkAuth
+
+    if (!usuarioId) {
+        return res.status(400).json({ erro: "ID do usuário não encontrado na requisição. O token é válido?" });
+    }
+
+    try {
+        const { rows } = await pool.query('SELECT id, nome, email, tipo_pessoa, documento, role, created_at FROM usuarios WHERE id = $1', [usuarioId]);
+        if (rows.length === 0) {
+            return res.status(404).json({ erro: 'Usuário não encontrado' });
+        }
+        res.status(200).json(rows[0]);
+    } catch (erro) {
+        console.error('Erro ao buscar dados do usuário (getMe):', erro);
+        res.status(500).json({ erro: "Erro interno do servidor." });
+    }
+};
+
 // R - Read (Specific by ID)
 exports.getUserById = async (req, res) => {
     const { id } = req.params;
