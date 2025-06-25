@@ -46,6 +46,26 @@ exports.getAllUsers = async (req, res) => {
     }
 };
 
+// Nova função para buscar os dados do próprio usuário logado
+exports.getMe = async (req, res) => {
+  // O middleware `checkAuth` já validou o token e adicionou `req.user`.
+  const userId = req.user.id;
+
+  try {
+    const query = 'SELECT id, nome, email, tipo_usuario as "userType", foto_url as "photoUrl", cidade FROM usuarios WHERE id = $1';
+    const result = await pool.query(query, [userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ erro: 'Usuário não encontrado.' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Erro ao buscar dados do usuário:', error);
+    res.status(500).json({ erro: 'Erro interno do servidor.' });
+  }
+};
+
 // R - Read (Self - /me)
 exports.getMe = async (req, res) => {
     // Assumindo que o middleware checkAuth adiciona o ID do usuário em req.usuarioId
@@ -129,4 +149,91 @@ exports.deleteUser = async (req, res) => {
         console.error(erro.message);
         res.status(500).json({ erro: "Erro interno do servidor." });
     }
+};
+
+// Adiciona um prestador aos favoritos de um cliente
+exports.addFavorite = async (req, res) => {
+    // O ID do cliente vem do token (req.user.id)
+    // O ID do prestador vem do corpo da requisição
+    const clienteId = req.user.id;
+    const { prestadorId } = req.body;
+
+    if (!prestadorId) {
+        return res.status(400).json({ erro: 'O ID do prestador é obrigatório.' });
+    }
+
+    try {
+        await pool.query(
+            'INSERT INTO favoritos (cliente_id, prestador_id) VALUES ($1, $2)',
+            [clienteId, prestadorId]
+        );
+        res.status(201).json({ mensagem: 'Prestador favoritado com sucesso!' });
+    } catch (error) {
+        // Trata o caso de já ser favorito (violação de chave primária)
+        if (error.code === '23505') {
+            return res.status(409).json({ erro: 'Este prestador já está nos seus favoritos.' });
+        }
+        console.error('Erro ao adicionar favorito:', error);
+        res.status(500).json({ erro: 'Erro interno do servidor.' });
+    }
+};
+
+// Remove um prestador dos favoritos de um cliente
+exports.removeFavorite = async (req, res) => {
+    const clienteId = req.user.id;
+    const { prestadorId } = req.params; // O ID do prestador vem da URL
+
+    try {
+        const result = await pool.query(
+            'DELETE FROM favoritos WHERE cliente_id = $1 AND prestador_id = $2',
+            [clienteId, prestadorId]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ erro: 'Favorito não encontrado para este usuário.' });
+        }
+        res.status(200).json({ mensagem: 'Prestador removido dos favoritos.' });
+    } catch (error) {
+        console.error('Erro ao remover favorito:', error);
+        res.status(500).json({ erro: 'Erro interno do servidor.' });
+    }
+};
+
+// Busca todos os IDs de prestadores favoritados por um cliente
+exports.getFavorites = async (req, res) => {
+    const clienteId = req.user.id;
+
+    try {
+        const result = await pool.query(
+            'SELECT prestador_id FROM favoritos WHERE cliente_id = $1',
+            [clienteId]
+        );
+        // Retorna um array de IDs para ser fácil de usar no frontend
+        const favoriteIds = result.rows.map(row => row.prestador_id);
+        res.status(200).json(favoriteIds);
+    } catch (error) {
+        console.error('Erro ao buscar favoritos:', error);
+        res.status(500).json({ erro: 'Erro interno do servidor.' });
+    }
+};
+
+exports.updateProfilePhoto = async (req, res) => {
+  // O middleware 'upload' anexa o arquivo a 'req.file'
+  if (!req.file) {
+    return res.status(400).json({ erro: 'Nenhum arquivo enviado.' });
+  }
+
+  // Por enquanto, apenas confirmamos que recebemos o arquivo.
+  // A integração com um serviço de nuvem (como Cloudinary) virá depois.
+  console.log('Arquivo recebido:', req.file);
+  
+  res.status(200).json({ 
+    mensagem: 'Foto recebida com sucesso! Próximo passo: salvar na nuvem.',
+    fileInfo: {
+      fieldname: req.file.fieldname,
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size
+    }
+  });
 };
