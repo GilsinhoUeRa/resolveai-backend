@@ -1,38 +1,28 @@
 // src/controllers/auth.controller.js
-const pool = require('../config/database');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+const authService = require('../services/auth.service');
 
+/**
+ * Controller responsável por orquestrar o fluxo de login.
+ * Ele não contém lógica de negócio, apenas chama o serviço apropriado.
+ */
 exports.login = async (req, res) => {
-  const { email, senha } = req.body;
-  try {
-    const resultado = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email]);
-    if (resultado.rows.length === 0) {
-      return res.status(401).json({ erro: 'Credenciais inválidas' });
+    try {
+        // 1. Extrai os dados da requisição.
+        const { email, senha } = req.body;
+
+        // 2. Chama o serviço para executar a lógica de negócio.
+        const resultado = await authService.login(email, senha);
+
+        // 3. Retorna a resposta de sucesso enviada pelo serviço.
+        res.status(200).json(resultado);
+        
+    } catch (erro) {
+        // 4. Captura qualquer erro lançado pelo serviço e formata a resposta de erro.
+        const statusCode = erro.statusCode || 500;
+        res.status(statusCode).json({ erro: erro.message || 'Erro interno do servidor.' });
     }
-
-    const usuario = resultado.rows[0];
-    const senhaValida = await bcrypt.compare(senha, usuario.senha);
-    if (!senhaValida) {
-      return res.status(401).json({ erro: 'Credenciais inválidas' });
-    }
-
-    // --- CORREÇÃO APLICADA AQUI ---
-    // Adicionamos a 'role' do usuário ao payload do token.
-    const token = jwt.sign(
-      { 
-        userId: usuario.id, 
-        role: usuario.role // <-- A INFORMAÇÃO CRUCIAL QUE FALTAVA
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' } 
-    );
-
-    res.status(200).json({ token });
-  } catch (erro) {
-    console.error('Erro no login:', erro);
-    res.status(500).json({ erro: 'Ocorreu um erro no servidor' });
-  }
 };
 
+// O 'module.exports' é desnecessário quando se usa 'exports.funcao'
+// mas pode ser mantido se preferir.
 module.exports = exports;
