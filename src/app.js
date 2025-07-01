@@ -3,8 +3,15 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 
+// --- OPÇÕES DE CORS ---
+// Isto diz ao nosso backend para aceitar explicitamente pedidos do nosso servidor de desenvolvimento do frontend
+const corsOptions = {
+    origin: 'http://localhost:5173', // A porta padrão do Vite. Mude se a sua for diferente.
+    optionsSuccessStatus: 200
+};
+
 // --- MIDDLEWARES GLOBAIS ---
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json()); // <-- ADICIONE ESTA LINHA. É ESSENCIAL.
 
 // Importando todos os roteadores
