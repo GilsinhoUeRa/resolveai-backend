@@ -4,21 +4,28 @@ import request from 'supertest';
 import app from '../src/app'; // Importamos nossa instância do Express
 
 // Descreve o conjunto de testes para a rota de autenticação
-describe('POST /api/login', () => {
+describe('POST /api/auth/login', () => {
 
     // O 'it' descreve um caso de teste específico
     it('deve retornar um token JWT para credenciais válidas', async () => {
-        // AÇÃO NECESSÁRIA: Substitua com um email e senha de um usuário REAL 
-        // que exista no seu banco de dados de DESENVOLVIMENTO.
+        // AÇÃO NECESSÁRIA: Garanta que este usuário e senha existam no seu banco de dados de DESENVOLVIMENTO.
         const credentials = {
             email: 'final.test@resolveai.com',
             senha: 'Testando@321'
         };
 
+        // --- CORREÇÃO APLICADA AQUI ---
+        // A chamada agora é uma única cadeia de métodos, sem duplicação.
         const response = await request(app)
-            .post('/api/login') // Faz a requisição POST
-            .send(credentials) // Envia os dados no corpo
+            .post('/api/auth/login')
+            .send(credentials)
             .set('Accept', 'application/json');
+
+        // Se a resposta não for 200, imprime o corpo do erro para análise
+        if (response.statusCode !== 200) {
+            console.error('RESPOSTA DE ERRO RECEBIDA DO SERVIDOR:', response.body);
+        }
+        // --- FIM DA CORREÇÃO ---
 
         // Verificamos se a resposta foi bem-sucedida (status 200)
         expect(response.statusCode).toBe(200);
@@ -37,9 +44,13 @@ describe('POST /api/login', () => {
         };
 
         const response = await request(app)
-            .post('/api/login')
+            .post('/api/auth/login')
             .send(invalidCredentials)
             .set('Accept', 'application/json');
+        
+        if (response.statusCode !== 401) {
+            console.error('RESPOSTA INESPERADA (INVÁLIDA) DO SERVIDOR:', response.body);
+        }
 
         // Verificamos se a resposta foi de não autorizado (status 401)
         expect(response.statusCode).toBe(401);

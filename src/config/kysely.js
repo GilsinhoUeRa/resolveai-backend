@@ -1,13 +1,14 @@
 // src/config/kysely.js
 const { Kysely, PostgresDialect } = require('kysely');
-const pool = require('./database'); // Importamos nossa pool de conexão existente
+const pool = require('./database');
 
-// Criamos o "dialeto" que ensina o Kysely a falar com o PostgreSQL
 const dialect = new PostgresDialect({
-    pool: pool
+    pool
 });
 
-// Criamos e exportamos a instância do Kysely que será nosso novo "cérebro" de banco de dados
+// O comentário JSDoc abaixo é a chave. Ele informa ao editor e ao TypeScript
+// sobre a estrutura do nosso banco de dados, ativando o autocompletar e a segurança de tipos.
+/** @type {import('kysely').Kysely<import('../types/database.types').Database>} */
 const db = new Kysely({
     dialect,
 });

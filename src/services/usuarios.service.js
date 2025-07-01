@@ -1,6 +1,7 @@
 // src/services/usuarios.service.js
 const pool = require('../config/database');
 const bcrypt = require('bcrypt');
+const db = require('../config/kysely');
 
 // -- Funções de Criação e Leitura --
 
@@ -136,6 +137,37 @@ const updatePhotoUrl = async (userId, photoUrl) => {
     return rows[0];
 };
 
+const getFeaturedProviders = async () => {
+    // Esta query busca 4 prestadores aleatórios.
+    // Em um sistema real, a lógica seria mais complexa (ex: melhores avaliações, mais recentes, etc.)
+    return await db.selectFrom('usuarios as u')
+        .innerJoin('perfis_profissionais as pp', 'pp.usuario_id', 'u.id')
+        .selectAll('u')
+        .select(['pp.bio', 'pp.whatsapp']) // Adicione outros campos do perfil que precisar
+        .where('u.role', '=', 'PRESTADOR')
+        .orderBy(db.fn.random()) // db.fn.random() é para PostgreSQL. Use RAND() para MySQL.
+        .limit(4)
+        .execute();
+};
+
+/**
+ * Busca os detalhes completos dos prestadores favoritados por um cliente.
+ * @param {number} clienteId - O ID do cliente logado.
+ * @returns {Promise<Array<object>>} Uma lista de objetos de prestadores.
+ */
+const getFavoriteProviders = async (clienteId) => {
+    return await db.selectFrom('favoritos as f')
+        .innerJoin('usuarios as u', 'u.id', 'f.prestador_id')
+        .innerJoin('profissoes as p', 'p.id', 'u.profissao_id') // Exemplo de JOIN para pegar o nome da profissão
+        .select([
+            'u.id', 'u.nome', 'u.email', 'u.cidade', 'u.foto_url',
+            'p.nome as nome_profissao' // Seleciona o nome da profissão com um alias
+            // Adicione outros campos necessários aqui
+        ])
+        .where('f.cliente_id', '=', clienteId)
+        .execute();
+};
+
 // Não esqueça de exportar a nova função no final do arquivo
 
 module.exports = {
@@ -146,5 +178,7 @@ module.exports = {
     update,
     deleteUser,
 	updatePhotoUrl,
-    becomeProvider
+    becomeProvider,
+	getFeaturedProviders,
+	getFavoriteProviders
 };

@@ -28,6 +28,8 @@ router.use(checkAuth); // Aplica checkAuth a todas as rotas abaixo
 router.get('/me', usuariosController.getMe);
 router.patch('/me/photo', upload.single('profileImage'), usuariosController.updateProfilePhoto);
 
+router.get('/me/avaliacoes', usuariosController.getMyReviews);
+
 // --- ROTAS DE FAVORITOS (aninhadas sob o usuário logado) ---
 // Estas rotas não precisam mais do checkAuth individual, pois já foi aplicado acima.
 router.get('/me/favoritos', usuariosController.getFavorites);
@@ -48,6 +50,8 @@ router.delete('/:id', checkRole(['ADMIN']), usuariosController.deleteUser);
 // garantindo que um usuário só pode editar a si mesmo, ou um admin pode editar qualquer um.
 router.get('/:id', usuariosController.getUserById);
 router.patch('/:id', usuariosController.updateUser);
+
+
 
 
 module.exports = router;

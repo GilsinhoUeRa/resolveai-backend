@@ -2,6 +2,7 @@
 
 // O controller importa apenas o serviço. Ele não sabe sobre o banco de dados.
 const usuariosService = require('../services/usuarios.service');
+const avaliacoesService = require('../services/avaliacoes.service'); // Importe o serviço de avaliações
 
 /**
  * Função auxiliar para tratar erros de forma padronizada nos controllers.
@@ -47,6 +48,16 @@ exports.getUserById = async (req, res) => {
         res.status(200).json(usuario);
     } catch (erro) {
         handleControllerError(res, erro);
+    }
+};
+
+exports.getMyReviews = async (req, res) => {
+    try {
+        const clienteId = req.user.id;
+        const reviews = await avaliacoesService.getByClientId(clienteId);
+        res.status(200).json(reviews);
+    } catch (error) {
+        handleControllerError(res, error);
     }
 };
 
@@ -137,14 +148,12 @@ exports.removeFavorite = async (req, res) => {
     }
 };
 exports.getFavorites = async (req, res) => {
-    // LÓGICA A SER MOVIDA PARA O SERVICE
-    const clienteId = req.user.id;
     try {
-        const pool = require('../config/database');
-        const result = await pool.query('SELECT prestador_id FROM favoritos WHERE cliente_id = $1', [clienteId]);
-        const favoriteIds = result.rows.map(row => row.prestador_id);
-        res.status(200).json(favoriteIds);
-    } catch (error) {
-        handleControllerError(res, error);
+        const clienteId = req.user.id;
+        // Chama a nova função de serviço que retorna os detalhes completos
+        const providers = await usuariosService.getFavoriteProviders(clienteId);
+        res.status(200).json(providers);
+    } catch (erro) {
+        handleControllerError(res, erro);
     }
 };

@@ -1,28 +1,24 @@
 // src/controllers/auth.controller.js
 const authService = require('../services/auth.service');
 
-/**
- * Controller responsável por orquestrar o fluxo de login.
- * Ele não contém lógica de negócio, apenas chama o serviço apropriado.
- */
 exports.login = async (req, res) => {
     try {
-        // 1. Extrai os dados da requisição.
         const { email, senha } = req.body;
-
-        // 2. Chama o serviço para executar a lógica de negócio.
         const resultado = await authService.login(email, senha);
-
-        // 3. Retorna a resposta de sucesso enviada pelo serviço.
         res.status(200).json(resultado);
-        
     } catch (erro) {
-        // 4. Captura qualquer erro lançado pelo serviço e formata a resposta de erro.
+        // --- MUDANÇA PARA DEPURAÇÃO ---
+        // Imprime o erro completo no console do servidor para máxima visibilidade
+        console.error('[ERRO CAPTURADO NO CONTROLLER]:', erro);
+
         const statusCode = erro.statusCode || 500;
-        res.status(statusCode).json({ erro: erro.message || 'Erro interno do servidor.' });
+
+        // Retorna a mensagem de erro real na resposta da API, para que o teste a capture
+        res.status(statusCode).json({ 
+            erro: erro.message || 'Erro interno do servidor.',
+            // Opcional: envia o stack trace em ambiente de teste para análise completa
+            stack: process.env.NODE_ENV === 'test' ? erro.stack : undefined
+        });
+        // --- FIM DA MUDANÇA ---
     }
 };
-
-// O 'module.exports' é desnecessário quando se usa 'exports.funcao'
-// mas pode ser mantido se preferir.
-module.exports = exports;

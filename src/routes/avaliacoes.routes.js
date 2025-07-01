@@ -1,17 +1,16 @@
 // src/routes/avaliacoes.routes.js
 const { Router } = require('express');
-
-// Correção: Importamos cada middleware do seu próprio arquivo.
+const avaliacoesController = require('../controllers/avaliacoes.controller');
 const checkAuth = require('../middlewares/checkAuth');
 const checkRole = require('../middlewares/checkRole');
 
-const servicosController = require('../controllers/servicos.controller');
-
-// A opção { mergeParams: true } está perfeita e é essencial.
+// { mergeParams: true } permite aceder a parâmetros da rota pai (ex: /servicos/:servicoId)
 const router = Router({ mergeParams: true });
 
-// Rota para criar uma avaliação para um serviço específico.
-// O caminho final será: POST /api/servicos/:servicoId/avaliacoes
-router.post('/', checkAuth, checkRole(['CLIENTE']), servicosController.createReviewForService);
+// POST /api/servicos/:servicoId/avaliacoes - Apenas clientes podem criar avaliações
+router.post('/', checkAuth, checkRole(['CLIENTE']), avaliacoesController.createReview);
+
+// GET /api/servicos/:servicoId/avaliacoes - Rota pública para ver as avaliações de um serviço
+router.get('/', avaliacoesController.getReviewsForService);
 
 module.exports = router;
