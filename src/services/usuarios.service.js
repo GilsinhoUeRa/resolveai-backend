@@ -1,174 +1,118 @@
-// src/services/usuarios.service.js
-const pool = require('../config/database');
-const bcrypt = require('bcrypt');
+// src/services/usuarios.service.js (Versão Final 100% Kysely)
 const db = require('../config/kysely');
-
-// -- Funções de Criação e Leitura --
+const bcrypt = require('bcrypt');
 
 const create = async (userData) => {
-    const { nome, email, senha, tipo_pessoa, documento } = userData;
-    const documentoLimpo = documento.replace(/\D/g, '');
+    const { nome, email, senha, tipo_pessoa, documento, cep, logradouro, bairro, cidade, uf, numero, complemento } = userData;
     const hashSenha = await bcrypt.hash(senha, 10);
     try {
-        const query = `
-            INSERT INTO usuarios (nome, email, senha, tipo_pessoa, documento) 
-            VALUES ($1, $2, $3, $4, $5) 
-            RETURNING id, nome, email, tipo_pessoa, documento, role, created_at`;
-        const { rows } = await pool.query(query, [nome, email, hashSenha, tipo_pessoa, documentoLimpo]);
-        return rows[0];
-    } catch (erro) {
-        if (erro.code === '23505') {
-            const customError = new Error('Este documento ou email já está cadastrado.');
+        return await db.insertInto('usuarios').values({
+            nome, email, senha: hashSenha, tipo_pessoa, documento, cep, logradouro, numero, complemento, bairro, cidade, uf,
+        }).returningAll().executeTakeFirstOrThrow();
+    } catch (error) {
+        if (error.code === '23505') {
+            const customError = new Error('Um utilizador com este email ou documento já existe.');
             customError.statusCode = 409;
             throw customError;
         }
-        throw erro;
+        throw error;
     }
 };
 
 const getAll = async () => {
-    const { rows } = await pool.query('SELECT id, nome, email, tipo_pessoa, documento, role, created_at FROM usuarios ORDER BY id ASC');
-    return rows;
+    return await db.selectFrom('usuarios')
+        .select(['id', 'nome', 'email', 'role', 'cidade', 'uf', 'isActive'])
+        .orderBy('id', 'asc')
+        .execute();
 };
 
 const getById = async (userId) => {
-    const { rows } = await pool.query('SELECT id, nome, email, tipo_pessoa, documento, role, created_at FROM usuarios WHERE id = $1', [userId]);
-    if (rows.length === 0) {
-        const error = new Error('Usuário não encontrado.');
-        error.statusCode = 404;
-        throw error;
-    }
-    return rows[0];
+    return await db.selectFrom('usuarios')
+        .selectAll()
+        .where('id', '=', userId)
+        .executeTakeFirst();
 };
 
 const getMe = async (userId) => {
-    const query = `
-        SELECT u.id, u.nome, u.email, u.role, u.tipo_pessoa, u.documento, u.foto_url,
-               pp.bio, pp.whatsapp, pp.horario_atendimento
-        FROM usuarios u
-        LEFT JOIN perfis_profissionais pp ON u.id = pp.usuario_id
-        WHERE u.id = $1;
-    `;
-    const { rows } = await pool.query(query, [userId]);
-    if (rows.length === 0) {
-        const error = new Error('Usuário não encontrado.');
-        error.statusCode = 404;
-        throw error;
-    }
-    return rows[0];
+    return await db.selectFrom('usuarios as u')
+        .leftJoin('perfis_profissionais as pp', 'pp.usuario_id', 'u.id')
+        .selectAll('u')
+        .select(['pp.bio', 'pp.whatsapp', 'pp.horario_atendimento'])
+        .where('u.id', '=', userId)
+        .executeTakeFirst();
 };
 
-// -- Funções de Atualização e Deleção --
-
 const update = async (targetUserId, updateData) => {
-    const { nome, email } = updateData;
-    try {
-        const queryUpdate = `
-            UPDATE usuarios 
-            SET nome = COALESCE($1, nome), email = COALESCE($2, email)
-            WHERE id = $3 
-            RETURNING id, nome, email, tipo_pessoa, documento, role;
-        `;
-        const { rows } = await pool.query(queryUpdate, [nome, email, targetUserId]);
-        if (rows.length === 0) {
-            const error = new Error('Usuário não encontrado para atualizar.');
-            error.statusCode = 404;
-            throw error;
-        }
-        return rows[0];
-    } catch (erro) {
-        if (erro.code === '23505') {
-            const customError = new Error('O email fornecido já pertence a outro usuário.');
-            customError.statusCode = 409;
-            throw customError;
-        }
-        throw erro;
-    }
+    // Kysely ignora campos 'undefined', então não precisamos do COALESCE
+    return await db.updateTable('usuarios')
+        .set(updateData)
+        .where('id', '=', targetUserId)
+        .returning(['id', 'nome', 'email', 'role'])
+        .executeTakeFirst();
 };
 
 const deleteUser = async (userId) => {
-    const resultado = await pool.query('DELETE FROM usuarios WHERE id = $1', [userId]);
-    if (resultado.rowCount === 0) {
-        const error = new Error('Usuário não encontrado.');
-        error.statusCode = 404;
-        throw error;
-    }
-    // Retorna sucesso implícito, o controller cuidará do status 204
+    const result = await db.deleteFrom('usuarios')
+        .where('id', '=', userId)
+        .executeTakeFirst();
+    return result.numDeletedRows > 0;
 };
-
-// -- Funções de Perfil de Prestador --
 
 const becomeProvider = async (userId, providerData) => {
     const { bio, whatsapp, horario_atendimento } = providerData;
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-        const perfilQuery = `
-            INSERT INTO perfis_profissionais (usuario_id, bio, whatsapp, horario_atendimento)
-            VALUES ($1, $2, $3, $4)
-            ON CONFLICT (usuario_id) DO UPDATE 
-            SET bio = EXCLUDED.bio, whatsapp = EXCLUDED.whatsapp, 
-                horario_atendimento = EXCLUDED.horario_atendimento, atualizado_em = NOW();
-        `;
-        await client.query(perfilQuery, [userId, bio, whatsapp, horario_atendimento]);
-        const usuarioQuery = `UPDATE usuarios SET role = 'PRESTADOR' WHERE id = $1`;
-        await client.query(usuarioQuery, [userId]);
-        await client.query('COMMIT');
-        const resultadoFinal = await getMe(userId); // Reutiliza a função getMe
-        return resultadoFinal;
-    } catch (error) {
-        await client.query('ROLLBACK');
-        throw error; // Lança o erro para o controller tratar
-    } finally {
-        client.release();
-    }
+
+    return await db.transaction().execute(async (trx) => {
+        // Usa a transação (trx) para todas as queries dentro deste bloco
+        await trx.insertInto('perfis_profissionais')
+            .values({ usuario_id: userId, bio, whatsapp, horario_atendimento })
+            .onConflict(oc => oc.column('usuario_id').doUpdateSet({ bio, whatsapp, horario_atendimento }))
+            .execute();
+            
+        await trx.updateTable('usuarios')
+            .set({ role: 'PRESTADOR' })
+            .where('id', '=', userId)
+            .execute();
+
+        // Reutiliza a função getMe, mas dentro da transação se necessário
+        // ou chama diretamente após o commit da transação.
+        // Para simplicidade, vamos buscar fora após o sucesso.
+    });
 };
 
 const updatePhotoUrl = async (userId, photoUrl) => {
-    const { rows } = await pool.query(
-        'UPDATE usuarios SET foto_url = $1 WHERE id = $2 RETURNING id, foto_url',
-        [photoUrl, userId]
-    );
-    if (rows.length === 0) {
-        const error = new Error('Usuário não encontrado para atualizar a foto.');
-        error.statusCode = 404;
-        throw error;
-    }
-    return rows[0];
+    return await db.updateTable('usuarios')
+        .set({ foto_url: photoUrl })
+        .where('id', '=', userId)
+        .returning(['id', 'foto_url'])
+        .executeTakeFirst();
 };
 
 const getFeaturedProviders = async () => {
-    // Esta query busca 4 prestadores aleatórios.
-    // Em um sistema real, a lógica seria mais complexa (ex: melhores avaliações, mais recentes, etc.)
     return await db.selectFrom('usuarios as u')
         .innerJoin('perfis_profissionais as pp', 'pp.usuario_id', 'u.id')
-        .selectAll('u')
-        .select(['pp.bio', 'pp.whatsapp']) // Adicione outros campos do perfil que precisar
+        .leftJoin('profissoes as p', 'u.profissao_id', 'p.id')
+        .select([
+            'u.id', 'u.nome', 'u.cidade', 'u.foto_url',
+            'p.nome as profession_name', 'pp.bio'
+        ])
         .where('u.role', '=', 'PRESTADOR')
-        .orderBy(db.fn.random()) // db.fn.random() é para PostgreSQL. Use RAND() para MySQL.
+        .where('u.isActive', '=', true)
+        .orderBy(db.fn.random())
         .limit(4)
         .execute();
 };
 
-/**
- * Busca os detalhes completos dos prestadores favoritados por um cliente.
- * @param {number} clienteId - O ID do cliente logado.
- * @returns {Promise<Array<object>>} Uma lista de objetos de prestadores.
- */
 const getFavoriteProviders = async (clienteId) => {
     return await db.selectFrom('favoritos as f')
         .innerJoin('usuarios as u', 'u.id', 'f.prestador_id')
-        .innerJoin('profissoes as p', 'p.id', 'u.profissao_id') // Exemplo de JOIN para pegar o nome da profissão
+        .leftJoin('profissoes as p', 'u.profissao_id', 'p.id')
         .select([
             'u.id', 'u.nome', 'u.email', 'u.cidade', 'u.foto_url',
-            'p.nome as nome_profissao' // Seleciona o nome da profissão com um alias
-            // Adicione outros campos necessários aqui
+            'p.nome as profession_name'
         ])
         .where('f.cliente_id', '=', clienteId)
         .execute();
 };
-
-// Não esqueça de exportar a nova função no final do arquivo
 
 module.exports = {
     create,
@@ -177,8 +121,8 @@ module.exports = {
     getMe,
     update,
     deleteUser,
-	updatePhotoUrl,
+    updatePhotoUrl,
     becomeProvider,
-	getFeaturedProviders,
-	getFavoriteProviders
+    getFeaturedProviders,
+    getFavoriteProviders
 };

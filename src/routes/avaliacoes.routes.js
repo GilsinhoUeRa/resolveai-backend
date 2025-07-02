@@ -4,7 +4,7 @@ const avaliacoesController = require('../controllers/avaliacoes.controller');
 const checkAuth = require('../middlewares/checkAuth');
 const checkRole = require('../middlewares/checkRole');
 
-// { mergeParams: true } permite aceder a parâmetros da rota pai (ex: /servicos/:servicoId)
+// { mergeParams: true } permite que esta rota acesse parâmetros da rota pai (ex: /servicos/:servicoId)
 const router = Router({ mergeParams: true });
 
 // POST /api/servicos/:servicoId/avaliacoes - Apenas clientes podem criar avaliações

@@ -2,6 +2,8 @@
 const express = require('express');
 const cors = require('cors');
 const app = express();
+const passport = require('passport'); // 1. Importar o Passport
+require('./config/passport.config.js'); // 2. Importar a nossa configuração (isto executa o código do ficheiro)
 
 // --- OPÇÕES DE CORS ---
 // Isto diz ao nosso backend para aceitar explicitamente pedidos do nosso servidor de desenvolvimento do frontend
@@ -13,6 +15,7 @@ const corsOptions = {
 // --- MIDDLEWARES GLOBAIS ---
 app.use(cors(corsOptions));
 app.use(express.json()); // <-- ADICIONE ESTA LINHA. É ESSENCIAL.
+app.use(passport.initialize()); // 3. Inicializar o Passport como middleware
 
 // Importando todos os roteadores
 const authRoutes = require('./routes/auth.routes');

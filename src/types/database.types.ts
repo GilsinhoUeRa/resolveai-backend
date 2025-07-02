@@ -10,7 +10,7 @@ export interface Database {
 // Interface para a tabela 'usuarios'
 // Os nomes das propriedades devem corresponder EXATAMENTE aos nomes das colunas no seu banco de dados.
 export interface UsuariosTable {
-  id: Generated<number>; // `Generated` informa ao Kysely que este campo é autoincrementado.
+  id: Generated<number>;
   nome: string;
   email: string;
   senha: string;
@@ -18,9 +18,12 @@ export interface UsuariosTable {
   documento: string;
   role: 'CLIENTE' | 'PRESTADOR' | 'ADMIN';
   isActive: boolean;
-  cidade: string | null; // | null se a coluna puder ser nula
   foto_url: string | null;
   profissao_id: number | null;
-  // `ColumnType` é usado para colunas com tipos diferentes na leitura vs. inserção/atualização.
+  cep: string | null;
+  logradouro: string | null;
+  bairro: string | null;
+  cidade: string | null; // <-- ÚNICA DECLARAÇÃO CORRETA
+  uf: string | null;
   created_at: ColumnType<Date, string | undefined, never>;
 }
