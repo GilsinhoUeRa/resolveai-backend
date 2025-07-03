@@ -90,7 +90,8 @@ const updatePhotoUrl = async (userId, photoUrl) => {
 const getFeaturedProviders = async () => {
     return await db.selectFrom('usuarios as u')
         .innerJoin('perfis_profissionais as pp', 'pp.usuario_id', 'u.id')
-        .leftJoin('profissoes as p', 'u.profissao_id', 'p.id')
+        // O JOIN agora é feito através da tabela de perfis para chegar à profissão
+        .leftJoin('profissoes as p', 'pp.profissao_id', 'p.id') 
         .select([
             'u.id', 'u.nome', 'u.cidade', 'u.foto_url',
             'p.nome as profession_name', 'pp.bio'
@@ -105,7 +106,9 @@ const getFeaturedProviders = async () => {
 const getFavoriteProviders = async (clienteId) => {
     return await db.selectFrom('favoritos as f')
         .innerJoin('usuarios as u', 'u.id', 'f.prestador_id')
-        .leftJoin('profissoes as p', 'u.profissao_id', 'p.id')
+        .innerJoin('perfis_profissionais as pp', 'pp.usuario_id', 'u.id')
+        // O JOIN agora é feito através da tabela de perfis
+        .leftJoin('profissoes as p', 'pp.profissao_id', 'p.id') 
         .select([
             'u.id', 'u.nome', 'u.email', 'u.cidade', 'u.foto_url',
             'p.nome as profession_name'
