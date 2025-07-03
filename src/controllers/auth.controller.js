@@ -21,26 +21,35 @@ exports.login = async (req, res) => {
 };
 
 /**
- * Lida com o callback do Google OAuth após uma tentativa de login bem-sucedida.
- * Gera o nosso JWT interno e redireciona o utilizador de volta para o frontend.
+ * Lida com o callback do Google OAuth após uma tentativa de login.
+ * Redireciona para completar o registo se for um novo utilizador,
+ * ou gera um JWT e redireciona para o callback do app se for um utilizador existente.
  */
 exports.googleCallback = (req, res) => {
-    // O middleware do Passport.js, após a autenticação bem-sucedida,
-    // anexa o objeto 'user' (retornado pela nossa função 'done') ao 'req'.
     try {
-        const token = jwt.sign(
-            { userId: req.user.id, role: req.user.role },
-            process.env.JWT_SECRET,
-            { expiresIn: '1h' }
-        );
+        if (req.user.isNew) {
+            // Se o utilizador é novo, redireciona para a página de completar registo,
+            // passando os dados do Google como parâmetros de busca.
+            const queryParams = new URLSearchParams({
+                email: req.user.email,
+                nome: req.user.nome,
+                foto_url: req.user.foto_url
+            }).toString();
+            res.redirect(`${process.env.FRONTEND_URL}/complete-registration?${queryParams}`);
+        } else {
+            // --- CORREÇÃO APLICADA AQUI ---
+            // Se o utilizador já existe, gera o token com todos os argumentos corretos.
+            const token = jwt.sign(
+                { userId: req.user.id, role: req.user.role },
+                process.env.JWT_SECRET,
+                { expiresIn: '1h' }
+            );
+            // --- FIM DA CORREÇÃO ---
 
-        // Redireciona para um URL específico no nosso frontend, passando o token como um parâmetro de busca.
-        // O frontend será responsável por ler este parâmetro e guardar o token.
-        res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
-
+            res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
+        }
     } catch (error) {
-        // Em caso de falha na geração do JWT, redireciona para a página de login com um erro.
-        console.error("Erro ao gerar token JWT após o callback do Google:", error);
-        res.redirect(`${process.env.FRONTEND_URL}/login?error=token_generation_failed`);
+        console.error("Erro no callback do Google:", error);
+        res.redirect(`${process.env.FRONTEND_URL}/login?error=google_callback_failed`);
     }
 };
