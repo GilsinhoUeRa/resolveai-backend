@@ -36,42 +36,40 @@ const getById = async (userId) => {
 const getMe = async (userId) => {
     return await db.selectFrom('usuarios as u')
         .leftJoin('perfis_profissionais as pp', 'pp.usuario_id', 'u.id')
+        .leftJoin('profissoes as p', 'pp.profissao_id', 'p.id')
         .selectAll('u')
-        .select(['pp.bio', 'pp.whatsapp', 'pp.horario_atendimento'])
+        .select(['pp.bio', 'pp.whatsapp', 'pp.horario_atendimento', 'p.nome as nome_profissao'])
         .where('u.id', '=', userId)
         .executeTakeFirst();
 };
 
 const update = async (targetUserId, updateData) => {
-    // Kysely ignora campos 'undefined', então não precisamos do COALESCE
     return await db.updateTable('usuarios')
-        .set(updateData)
-        .where('id', '=', targetUserId)
-        .returning(['id', 'nome', 'email', 'role'])
-        .executeTakeFirst();
+	.set(updateData)
+	.where('id', '=', targetUserId)
+	.returning(['id', 'nome', 'email'])
+	.executeTakeFirst();
+};
 };
 
 const deleteUser = async (userId) => {
     const result = await db.deleteFrom('usuarios')
-        .where('id', '=', userId)
-        .executeTakeFirst();
+		.where('id', '=', userId)
+		.executeTakeFirst();
     return result.numDeletedRows > 0;
 };
 
 const becomeProvider = async (userId, providerData) => {
-    const { bio, whatsapp, horario_atendimento } = providerData;
-
+    const { profissao_id, bio, whatsapp, horario_atendimento } = providerData;
     return await db.transaction().execute(async (trx) => {
-        // Usa a transação (trx) para todas as queries dentro deste bloco
         await trx.insertInto('perfis_profissionais')
-            .values({ usuario_id: userId, bio, whatsapp, horario_atendimento })
-            .onConflict(oc => oc.column('usuario_id').doUpdateSet({ bio, whatsapp, horario_atendimento }))
+            .values({ usuario_id: userId, profissao_id, bio, whatsapp, horario_atendimento })
+            .onConflict(oc => oc.column('usuario_id').doUpdateSet({ profissao_id, bio, whatsapp, horario_atendimento }))
             .execute();
-            
         await trx.updateTable('usuarios')
-            .set({ role: 'PRESTADOR' })
-            .where('id', '=', userId)
-            .execute();
+		.set({ role: 'PRESTADOR' })
+		.where('id', '=', userId)
+		.execute();
 
         // Reutiliza a função getMe, mas dentro da transação se necessário
         // ou chama diretamente após o commit da transação.
@@ -106,12 +104,13 @@ const getFeaturedProviders = async () => {
 const getFavoriteProviders = async (clienteId) => {
     return await db.selectFrom('favoritos as f')
         .innerJoin('usuarios as u', 'u.id', 'f.prestador_id')
+        // 1. Faz o JOIN com a tabela de perfis primeiro
         .innerJoin('perfis_profissionais as pp', 'pp.usuario_id', 'u.id')
-        // O JOIN agora é feito através da tabela de perfis
-        .leftJoin('profissoes as p', 'pp.profissao_id', 'p.id') 
+        // 2. A partir do perfil, faz o JOIN com as profissões
+        .leftJoin('profissoes as p', 'p.id', 'pp.profissao_id') 
         .select([
             'u.id', 'u.nome', 'u.email', 'u.cidade', 'u.foto_url',
-            'p.nome as profession_name'
+            'p.nome as nome_profissao'
         ])
         .where('f.cliente_id', '=', clienteId)
         .execute();
