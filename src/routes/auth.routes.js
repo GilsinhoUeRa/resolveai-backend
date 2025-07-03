@@ -1,25 +1,28 @@
-// src/routes/auth.routes.js
+// src/routes/auth.routes.js (Versão Final de Verificação)
 const { Router } = require('express');
 const passport = require('passport');
-const jwt = require('jsonwebtoken');
 const authController = require('../controllers/auth.controller');
 
 const router = Router();
 
-// --- ROTA DE LOGIN TRADICIONAL ---
+// Rota de Login Tradicional
 router.post('/login', authController.login);
 
-// --- ROTAS DE LOGIN COM GOOGLE (OAUTH 2.0) ---
+// Rota de Início da Autenticação com Google
 router.get('/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
+  passport.authenticate('google', { 
+    scope: ['profile', 'email'],
+    session: false
+  })
 );
 
+// Rota de Callback do Google
 router.get('/google/callback', 
-  passport.authenticate('google', { session: false }),
-  (req, res) => {
-    const token = jwt.sign({ userId: req.user.id, role: req.user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    res.redirect(`http://localhost:5173/auth/callback?token=${token}`);
-  }
+  passport.authenticate('google', { 
+    failureRedirect: `${process.env.FRONTEND_URL}/login?error=google_auth_failed`,
+    session: false 
+  }),
+  authController.googleCallback
 );
 
 module.exports = router;
