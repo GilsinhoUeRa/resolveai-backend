@@ -1,42 +1,33 @@
-// src/routes/auth.routes.js
+// src/routes/auth.routes.js (Versão Final e Corrigida)
 const { Router } = require('express');
 const passport = require('passport');
-const jwt = require('jsonwebtoken');
 const authController = require('../controllers/auth.controller');
 
 const router = Router();
 
-// --- ROTA DE LOGIN TRADICIONAL ---
+// --- Rota de Login Tradicional ---
 router.post('/login', authController.login);
 
-// --- ROTAS DE LOGIN COM GOOGLE (OAUTH 2.0) ---
+// --- Rotas de Autenticação com Google (OAuth 2.0) ---
 
-// 1. Rota de Início da Autenticação
-// Quando o utilizador clica em "Login com Google", o frontend redireciona para este URL.
+// Rota de Início do Fluxo: O frontend redireciona para cá.
+// O Passport assume e redireciona para a página de consentimento do Google.
 router.get('/google',
-  passport.authenticate('google', {
-    scope: ['profile', 'email'] // Pedimos ao Google o perfil e o email do utilizador
+  passport.authenticate('google', { 
+    scope: ['profile', 'email'], // Informações que pedimos ao Google
+    session: false // A nossa API é stateless, usamos JWT e não sessões
   })
 );
 
-// 2. Rota de Callback
-// Após o utilizador fazer o login no Google, o Google redireciona de volta para este URL.
-router.get('/google/callback',
-  passport.authenticate('google', {
-    failureRedirect: '/login/failed', // Rota para onde redirecionar em caso de erro
-    session: false // Como usamos JWT, não precisamos de sessões do Express
+// Rota de Callback: O Google redireciona para cá após o utilizador consentir.
+router.get('/google/callback', 
+  passport.authenticate('google', { 
+    // Em caso de falha, redireciona de volta para a página de login do frontend com um erro.
+    failureRedirect: `${process.env.FRONTEND_URL}/login?error=google_auth_failed`,
+    session: false 
   }),
-  (req, res) => {
-    // Se a autenticação for bem-sucedida, o 'user' do Passport é anexado ao req.user.
-    const token = jwt.sign(
-      { userId: req.user.id, role: req.user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' }
-    );
-
-    // Redireciona de volta para o frontend com o token nos parâmetros da URL.
-    res.redirect(`http://localhost:5173/auth/callback?token=${token}`);
-  }
+  // Se a autenticação do Passport for bem-sucedida, o controlo passa para a nossa função no controller.
+  authController.googleCallback 
 );
 
 module.exports = router;
