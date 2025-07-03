@@ -65,5 +65,6 @@ app.use('/api/chat', chatRoutes);
 app.get('/', (req, res) => {
   res.send('API do ResolveAi está no ar!');
 });
+app.get('/favicon.ico', (req, res) => res.status(204).send());
 
 module.exports = app;
