@@ -12,10 +12,25 @@ const app = express();
 // --- Configuração de Middlewares Globais ---
 
 // Configuração explícita de CORS para aceitar pedidos do seu frontend em desenvolvimento
+
+// 1. Crie uma lista de origens permitidas
+const whitelist = [
+    'http://localhost:5173', // Para desenvolvimento local
+    'https://resolveai-test.vercel.app' // Para o seu ambiente de produção/teste
+];
+
 const corsOptions = {
-    origin: 'http://localhost:5173', // A porta padrão do Vite. Mude se a sua for diferente.
+    origin: function (origin, callback) {
+        // Permite pedidos sem origem (como do Postman/Insomnia) ou se a origem estiver na whitelist
+        if (!origin || whitelist.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Não permitido pela política de CORS'));
+        }
+    },
     optionsSuccessStatus: 200
 };
+
 app.use(cors(corsOptions));
 
 // Middleware essencial para interpretar corpos de requisição em formato JSON
