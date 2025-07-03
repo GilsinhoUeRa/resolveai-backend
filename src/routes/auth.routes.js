@@ -1,53 +1,25 @@
-// src/routes/auth.routes.js (Versão de Depuração)
+// src/routes/auth.routes.js
 const { Router } = require('express');
 const passport = require('passport');
+const jwt = require('jsonwebtoken');
 const authController = require('../controllers/auth.controller');
 
 const router = Router();
 
+// --- ROTA DE LOGIN TRADICIONAL ---
 router.post('/login', authController.login);
 
-// --- MIDDLEWARE DE DEPURAÇÃO ADICIONADO ---
-// Este middleware irá executar antes do Passport e imprimir informações cruciais.
-const debugGoogleAuth = (req, res, next) => {
-    console.log("==========================================================");
-    console.log("INICIANDO DEPURAÇÃO DA ROTA DE AUTENTICAÇÃO COM GOOGLE");
-
-    // A biblioteca do Passport constrói o URL de callback completo aqui.
-    // Vamos aceder-lhe para ver o que está a ser gerado.
-    const strategy = passport._strategy('google');
-    if (strategy && strategy._callbackURL) {
-        // Constrói o URL completo tal como o Passport o faria
-        const protocol = req.protocol;
-        const host = req.get('host');
-        const fullCallbackURL = `${protocol}://${host}${strategy._callbackURL}`;
-
-        console.log("URL de Callback que será enviado para o Google:", fullCallbackURL);
-    } else {
-        console.log("Não foi possível aceder à estratégia do Passport para depuração.");
-    }
-    console.log("==========================================================");
-
-    // Continua para a lógica normal do Passport
-    next();
-};
-
-// Rota de Início da Autenticação com Google (agora com o nosso debug)
+// --- ROTAS DE LOGIN COM GOOGLE (OAUTH 2.0) ---
 router.get('/google',
-  debugGoogleAuth, // <-- O nosso middleware é executado primeiro
-  passport.authenticate('google', { 
-    scope: ['profile', 'email'],
-    session: false
-  })
+  passport.authenticate('google', { scope: ['profile', 'email'] })
 );
 
-// Rota de Callback do Google (permanece a mesma)
 router.get('/google/callback', 
-  passport.authenticate('google', { 
-    failureRedirect: `${process.env.FRONTEND_URL}/login?error=google_auth_failed`,
-    session: false 
-  }),
-  authController.googleCallback
+  passport.authenticate('google', { session: false }),
+  (req, res) => {
+    const token = jwt.sign({ userId: req.user.id, role: req.user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    res.redirect(`http://localhost:5173/auth/callback?token=${token}`);
+  }
 );
 
 module.exports = router;
