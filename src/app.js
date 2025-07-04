@@ -19,6 +19,7 @@ const whitelist = [
     'https://resolveai-test.vercel.app' // Para o seu ambiente de produção/teste
 ];
 
+// 2. Configure as opções de CORS
 const corsOptions = {
     origin: function (origin, callback) {
         // Permite pedidos sem origem (como do Postman/Insomnia) ou se a origem estiver na whitelist
